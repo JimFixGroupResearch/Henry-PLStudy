@@ -1,3 +1,3 @@
-module LangA where
+module Henry.LangA where
 
-open import LangA.Base public
+open import Henry.LangA.Base public

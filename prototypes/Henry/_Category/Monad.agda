@@ -1,7 +1,7 @@
-module Henry.Data.Monad where
+module Henry.Category.Monad where
 
-open import Henry.Data.Functor using (Functor)
-open import Henry.Data.Applicative using (Applicative)
+open import Henry.Category.Functor using (Functor)
+open import Henry.Category.Applicative using (Applicative)
 
 open import Function
 open import Level
@@ -12,16 +12,15 @@ private
 
 open Applicative
 
-record Monad (M : Set ℓ → Set ℓ′) : Set (suc ℓ ⊔ ℓ′) where
+record Monad (M : Set ℓ → Set ℓ′) {{_ : Functor M}} {{Applicative-M : Applicative M}} : Set (suc ℓ ⊔ ℓ′) where
   infixl 1 _>>=_ _>>_ _>=>_
   infixr 1 _=<<_ _<=<_
 
   field
-    applicative : Applicative M
     _>>=_ : ∀ {A B : Set ℓ} → M A → (A → M B) → M B
 
   return : ∀ {A : Set ℓ} → A → M A
-  return a = pure applicative
+  return = pure Applicative-M
 
   _>>_ : ∀ {A B : Set ℓ} → M A → M B → M B
   m >> m′ = m >>= λ a → m′
@@ -34,3 +33,5 @@ record Monad (M : Set ℓ → Set ℓ′) : Set (suc ℓ ⊔ ℓ′) where
 
   _<=<_ : ∀ {A B C : Set ℓ} → (B → M C) → (A → M B) → (A → M C)
   g <=< f = f >=> g
+
+open Monad {{...}} public

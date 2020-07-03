@@ -4,5 +4,8 @@ module Henry.LangA.Grammar where
 -- Open Public
 --
 
-open Henry.LangA.Grammar.Base public
-open Henry.LangA.Grammar.Properties public
+open import Henry.LangA.Grammar.Base public
+
+module Properties where
+  open import Henry.LangA.Grammar.Properties public
+

@@ -6,41 +6,12 @@ module Henry.LangA.Grammar.Base where
 
 
 -- Data
-open import Data.List
+open import Data.List using (List; _∷_; [])
 open import Data.String
 open import Data.Nat
 open import Data.Bool
 open import Data.Fin
-
-
---
--- Term
---
-
-
-data Term-Atom : Set where
-  name : String → Term-Atom
-
-data Term : Set where
-  atom        : Term-Atom → Term
-  function    : Term-Atom → Term → Term
-  application : Term → Term → Term
-
-
---
--- Type
---
-
-
-data Type-Atom : Set where
-  natural : Type-Atom
-  boolean : Type-Atom
-  list    : Type-Atom
-
-data Type : Set where
-  atom        : Type-Atom → Type
-  function    : Type-Atom → Type → Type
-  application : Type → Type → Type
+open import Data.Maybe
 
 
 --
@@ -54,16 +25,55 @@ data Kind-Atom : Set where
 data Kind : Set where
   atom  : Kind-Atom → Kind
   arrow : Kind → Kind → Kind
+  
 
-
--- 
--- Register
+--
+-- Type
 --
 
 
--- heap has n registers
-data Register (n : ℕ) : Set where
-  register : Fin n → Register n
+data Type-Atom : Set where
+  unit    : Type-Atom
+  boolean : Type-Atom
+  natural : Type-Atom
+  list    : Type-Atom
+  arrow   : Type-Atom
+
+data Type : Set where
+  atom        : Type-Atom → Type
+  function    : Type-Atom → Kind → Type → Type
+  application : Type → Type → Type
+
+
+data Type-Variable : Set where
+  bound       : Type → Type-Variable
+  free        : ℕ → Type-Variable
+  application : Type-Variable → Type-Variable → Type-Variable
+  
+
+
+--
+-- Term
+--
+
+
+data Term-Atom : Set where
+  name : String → Term-Atom
+
+data Term : Set where
+  atom        : Term-Atom → Term
+  function    : Term-Atom → Type → Term → Term
+  application : Term → Term → Term
+
+
+-- 
+-- Pointer
+--
+
+
+-- heap has n pointers
+data Pointer : Set where
+  pointer : ℕ → Type → Pointer
 
 --
 -- Formula
@@ -71,7 +81,12 @@ data Register (n : ℕ) : Set where
 
 
 data Formula : Set where
-  term : Term → Formula
+  assert   : Term → Formula
+  equality : Term → Term → Formula
+  pointing : Pointer → Maybe Term → Formula
+  and      : Formula → Formula → Formula
+  or       : Formula → Formula → Formula
+  sep      : Formula → Formula → Formula
 
 
 --
@@ -79,14 +94,26 @@ data Formula : Set where
 --
 
 
-data Statement (n : ℕ) : Set where
-  pass        : Statement n
-  declaration : Type → Term-Atom → Term → Statement n
-  assignment  : Term-Atom → Term → Statement n
-  allocation  : Register n → Term → Statement n
-  write       : Register n → Term → Statement n
-  read        : Term-Atom → Register n → Statement n
-  assert      : Formula → Statement n
+data Statement : Set where
+  pass        : Statement
+  declaration : Term-Atom → Type → Term → Statement
+  assignment  : Term-Atom → Term → Statement
+  allocation  : Pointer → Type → Statement
+  write       : Pointer → Term → Statement
+  read        : Pointer → Term-Atom → Statement
+  assert      : Formula → Statement
+
+data Program : Set where
+  sequence : List (Statement) → Program
 
 
-Program = ∀(n : ℕ) → List (Statement n)
+--
+--
+--
+
+
+test-program-1 : Program
+test-program-1 = sequence
+  ( declaration (name "x") (atom boolean) (atom (name "true"))
+  ∷ assert (equality (atom (name "x")) (atom (name "true")))
+  ∷ [])

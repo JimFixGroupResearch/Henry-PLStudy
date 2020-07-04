@@ -17,8 +17,8 @@ open import Data.Product as Product
 open import Data.Sum as Sum
 open import Data.String as String
 open import Data.Unit as Unit
-open import Data.Bool as Bool
-open import Data.List as List
+open import Data.Bool as Bool hiding (not)
+open import Data.List as List hiding (and; or)
 open import Henry.Data.Dictionary as Dictionary hiding (empty)
 
 open import Henry.LangB.Grammar as Grammar
@@ -60,18 +60,24 @@ module Typing-State where
 
   -- stateful interactions
 
-  get-pointer-type : String → Typing-State Type
-  get-pointer-type p Γ = pointer-types Γ ⟦ p ⟧ Maybe.>>= λ ρ → just (ρ , Γ)
+  type-pointer : String → Typing-State Type
+  type-pointer p Γ = pointer-types Γ ⟦ p ⟧ Maybe.>>= λ ρ → just (ρ , Γ)
 
-  set-pointer-type : String → Type → Typing-State ⊤
-  set-pointer-type p ρ Γ = just (tt , Γ′) where
+  check-allocated : String → Typing-State ⊤
+  check-allocated p = type-pointer p >> return tt
+
+  set-type-pointer : String → Type → Typing-State ⊤
+  set-type-pointer p ρ Γ = just (tt , Γ′) where
     Γ′ = record Γ { pointer-types = pointer-types Γ ⟦ p ⇒ ρ ⟧ }
 
-  get-var-type : String → Typing-State Type
-  get-var-type x Γ = var-types Γ ⟦ x ⟧ Maybe.>>= λ ξ → just (ξ , Γ)
+  type-var : String → Typing-State Type
+  type-var x Γ = var-types Γ ⟦ x ⟧ Maybe.>>= λ ξ → just (ξ , Γ)
 
-  set-var-type : String → Type → Typing-State ⊤
-  set-var-type x ξ Γ = just (tt , Γ′) where
+  check-declared : String → Typing-State ⊤
+  check-declared x = type-var x >> return tt
+
+  set-type-var : String → Type → Typing-State ⊤
+  set-type-var x ξ Γ = just (tt , Γ′) where
     Γ′ = record Γ { var-types = var-types Γ ⟦ x ⇒ ξ ⟧ }
 
   -- utilities
@@ -86,34 +92,85 @@ open Typing-State
 
 
 --
+-- Utilities
+--
+
+
+check-type-equality : Type → Type → Typing-State ⊤
+check-type-equality α β with α Grammar.Properties.Type.≟ β
+... | yes _ = well-typed
+... | no  _ = mal-typed
+
+check-type-equality′ : Typing-State Type → Typing-State Type → Typing-State ⊤
+check-type-equality′ get-α get-β = do
+  α ← get-α
+  β ← get-β
+  check-type-equality α β
+
+
+-- ignores resulting state of stateful computation
+substate : ∀{A} → Typing-State A → Typing-State A
+substate s =
+  (s <$> get) >>= λ
+    { (just (a , Γ′)) → return a
+    ; nothing         → mal-typed }
+
+
+--
 -- Term
 --
 
 
 type-term : Term → Typing-State Type
-type-term a = {!!}
+type-term (var x) = type-var x
+type-term (nat x) = return natural
+type-term nil = return list
+type-term app = return list
+
+
+--
+-- Formula
+--
+
+
+check-formula : Formula → Typing-State ⊤
+check-formula (check a) = well-typed
+check-formula (equal a b) = check-type-equality′ (type-term a) (type-term b)
+check-formula (unequal a b) = check-type-equality′ (type-term a) (type-term b)
+check-formula (allocated (pointer p)) = check-allocated p
+check-formula (points (pointer p) a) = check-type-equality′ (type-pointer p) (type-term a)
+check-formula (not φ) = check-formula φ
+check-formula (and φ ψ) = check-formula φ >> check-formula ψ
+check-formula (or φ ψ) = check-formula φ >> check-formula ψ
+check-formula (sep φ ψ) = check-formula φ >> check-formula ψ
+
+
+--
+-- Statement
+--
+
 
 check-statement : Statement → Typing-State ⊤
-check-statement pass = well-typed
 check-statement (sequence []) = well-typed
 check-statement (sequence (s ∷ ss)) = check-statement s >> check-statement (sequence ss)
-check-statement (branch c s₁ s₂) =
-  get >>= λ Γ → const
-    (check-statement s₁ Γ Maybe.>>= λ _ →
-     check-statement s₂ Γ)
+check-statement pass = well-typed
+check-statement (assert φ) = check-formula φ
+check-statement (branch c s₁ s₂) = substate (check-statement s₁ >> check-statement s₂)
 check-statement (loop x s) = check-statement s
-check-statement (declare x ξ) = set-var-type x ξ
-check-statement (assign x a) = do
-  ξ ← get-var-type x
-  α ← type-term a
-  if does (ξ Grammar.Properties.Type.≟ α)
-    then well-typed
-    else mal-typed
-check-statement (allocate p ρ) = {!!}
-check-statement (write p a) = {!!}
-check-statement (read x p) = {!!}
-check-statement (function f xs s) = {!!}
-check-statement (apply x f as) = {!!}
+check-statement (declare x ξ) = set-type-var x ξ
+check-statement (assign x a) = check-type-equality′ (type-var x) (type-term a)
+check-statement (allocate (pointer p) ρ) = set-type-pointer p ρ
+check-statement (write (pointer p) a) = check-type-equality′ (type-pointer p) (type-term a)
+check-statement (read x (pointer p)) = check-type-equality′ (type-var x) (type-pointer p)
+-- todo: check equality of function type and list
+check-statement (function f xs φ ψ s) = todo where postulate todo : Typing-State ⊤
+check-statement (apply x f as) = todo where postulate todo : Typing-State ⊤
+
+
+--
+-- Program
+--
+
 
 check-program : Program → Typing-State ⊤
 check-program (program s) = check-statement s

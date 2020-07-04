@@ -20,7 +20,7 @@ open import Data.Nat
 data Type : Set where
   natural : Type
   list : Type
-  arrow : List Type → Type → Type
+  function : List Type → Type → Type
   
 
 --
@@ -28,8 +28,11 @@ data Type : Set where
 --
 
 
+Var : Set
+Var = String
+
 data Term : Set where
-  var : String → Term
+  var : Var → Term
   nat : ℕ → Term
   nil : Term
   app : Term
@@ -50,9 +53,15 @@ data Pointer : Set where
 
 
 data Formula : Set where
+  -- terms
+  check : Term → Formula
   equal : Term → Term → Formula
-  points : Pointer → Term → Formula
+  unequal : Term → Term → Formula
+  -- pointers
   allocated : Pointer → Formula
+  points : Pointer → Term → Formula
+  -- junctions
+  not : Formula → Formula
   and : Formula → Formula → Formula
   or : Formula → Formula → Formula
   sep : Formula → Formula → Formula -- seperately and
@@ -66,18 +75,19 @@ data Formula : Set where
 data Statement : Set where
   pass : Statement
   sequence : List Statement → Statement
+  assert : Formula → Statement
   -- control structures
   branch : Term → Statement → Statement → Statement
   loop : Term → Statement → Statement
   -- variables
-  declare : String → Type → Statement
-  assign : String → Term → Statement
+  declare : Var → Type → Statement
+  assign : Var → Term → Statement
   -- pointers
-  allocate : String → Type → Statement
+  allocate : Pointer → Type → Statement
   write : Pointer → Term → Statement
-  read : String → Pointer → Statement
+  read : Var → Pointer → Statement
   -- functions
-  function : Term → List (String × Type) → Statement → Statement
+  function : Term → List (Var × Type) → Formula → Formula → Statement → Statement
   apply : Term → Term → List Term → Statement
 
 

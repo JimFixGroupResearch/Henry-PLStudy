@@ -18,6 +18,6 @@ record Hoare-Triple : Set where
   constructor
     hoare-triple
   field
-    pre  : Formula
+    pre  : Symbolic
     body : Statement
-    post : Formula
+    post : Symbolic

@@ -23,5 +23,5 @@ Substitution A = (Var × Term) → A → A
 
 postulate
   substitute-var-in-term : Substitution Term
-  substitute-var-in-formula : Substitution Formula
+  substitute-var-in-formula : Substitution Symbolic
   substitute-var-in-statement : Substitution Statement

@@ -5,8 +5,11 @@ module Henry.LangB.BiAbduction where
 -- Imports
 --
 
+
 open import Function
 import Level
+
+open import Relation.Nullary
 
 open import Data.Unit as Unit
 open import Data.Empty as Empty
@@ -28,35 +31,57 @@ open import Henry.LangB.Hoare as Hoare
 
 open Monad.RawMonad (MaybeCategorical.monad {Level.zero})
 
+
 --
 -- Abductive Inference
 --
 
 
-syntax Abductive-Judgement Δ M H = Δ ⋆[ M ]▹ H
+infix 4 Abductive-Judgement
+syntax Abductive-Judgement Δ M H = Δ ⋆⟦ M ⟧▹ H
 
 data Abductive-Judgement : Concrete → Symbolic → Symbolic → Set where
 
   remove : ∀ (Π Π′ : Pure) (Σ Σ′ : Spacial) (â : List LVar) (M H : Symbolic)
-    → (Π ₚ∧ₛ Σ) ⋆[ M ]▹ H
-    → ([] , Π ₚ∧ₛ Σ) ⊢ (â , Π′ , true)
-    → ([] , Π ₚ∧ₚ Π′ , empty) ⊢ ([] , true , Σ′)
+    → (Π ₚ∧ₛ Σ) ⋆⟦ M ⟧▹ H
+    → ∃ₗ[] Π ₚ∧ₛ Σ ⊢ ∃ₗ[ â ] Π′ ₚ∧ₛ true
+    → ∃ₗ[] Π ₚ∧ₚ Π′ ₚ∧ₛ empty ⊢ ∃ₗ[] true ₚ∧ₛ Σ′
     ----------------------------------------------
-    → (Π ₚ∧ₛ Σ) ⋆[ M ]▹ (H ∧⋆ (â , Π′ , Σ′))
+    → Π ₚ∧ₛ Σ ⋆⟦ M ⟧▹ H ⋆ (∃ₗ[ â ] (Π′ ₚ∧ₛ Σ′))
 
   match : ∀ (E E₀ E₁ : Term) (Δ Δ′ : Concrete) (â b̂ : List LVar) (M : Symbolic)
-    → ((E₀ =ₜ E₁ , true) ∧ Δ) ⋆[ M ]▹ (b̂ , Δ′)
-    ---
-    → (Δ ⋆ₛ predₛ[ E ↦ₛ E₀ ]) ⋆[ (â , (E₀ =ₜ E₁) , true) ∧⋆ M ]▹
-      (â ++ b̂ , Δ′ ⋆ (true , predₛ[ E ↦ₛ E₁ ]))
+    → (E₀ =ₜ E₁ ₚ∧ₛ true) ∧ Δ ⋆⟦ M ⟧▹ ∃ₗ[ b̂ ] Δ′
+    -------------------------------------------------------------------------------------------
+    → (Δ ⋆ₛ E ↦ₛ E₀) ⋆⟦ (∃ₗ[ â ] E₀ =ₜ E₁ ₚ∧ₛ true) ⋆ M ⟧▹ ∃ₗ[ â ++ b̂ ] Δ′ ∧ true ₚ∧ₛ E ↦ₛ E₁
+    -- additionally: where b̂ ∩ FreeLVar(E₁) = ∅
+
+  lseg-right : ∀ (E₀ E₁ E : Term) (B : Spacial-Predicate-Binary)
+                 (Δ Δ′ : Concrete) (â b̂ : List LVar) (M : Symbolic)
+    → Δ ⋆⟦ M ⟧▹ ∃ₗ[ â ] Δ′ ∧ true ₚ∧ₛ lseg E₀ E₁
+    ------------------------------------------------------------------------
+    → Δ ∧ true ₚ∧ₛ pred₂ B E E₀ ⋆⟦ M ⟧▹ ∃ₗ[ â ++ b̂ ] Δ′ ∧ true ₚ∧ₛ E ↦ₛ E₁
+
+  base-empty : ∀ (Π Π′ : Pure) (â : List LVar) →
+    -------------------------------------------------------------
+    Π ₚ∧ₛ empty ⋆⟦ ∃ₗ[ â ] Π′ ₚ∧ₛ empty ⟧▹ ∃ₗ[ â ] Π′ ₚ∧ₛ empty
+
+  base-true : ∀ (Π : Pure) (Δ : Concrete) (â : List LVar)
+    ------------------------------------------------
+    → Δ ⋆⟦ ∃ₗ[ â ] Π ₚ∧ₛ empty ⟧▹ ∃ₗ[] Π ₚ∧ₛ empty
+
+  missing : ∀ (B : Spacial-Predicate-Binary) (E E′ : Term)
+              (Δ Δ′ : Concrete) (â : List LVar) (M : Symbolic)
+    → Δ ⋆⟦ M ⟧▹ ∃ₗ[] Δ′
+    → ((∃ₗ[] Δ) ⋆ (∃ₗ[ â ] true ₚ∧ₛ pred₂ B E E′)) ⊬ contradiction
+    -------------------------------------------------------------------------------------------
+    → Δ ⋆⟦ M ⋆ (∃ₗ[ â ] true ₚ∧ₛ pred₂ B E E′) ⟧▹ (∃ₗ[] Δ′) ⋆ (∃ₗ[ â ] true ₚ∧ₛ pred₂ B E E′)
 
 
 postulate
-  from-Abductive-Entails :
-    ∀ (Δ@(Δₚ , Δₛ) : Concrete) (M@(Mₗ , Mₚ , Mₛ) : Symbolic) (H : Symbolic)
-    → Δ ⋆[ M ]▹ H
-    --------------------------------
-    → ([] , Δ) ∧⋆ M ⊢ H
+  from-Abductive-Entails : ∀ (Δ : Concrete) (M : Symbolic) (H : Symbolic)
+    → Δ ⋆⟦ M ⟧▹ H
+    --------------------
+    → (∃ₗ[] Δ) ⋆ M ⊢ H
 
 --
 -- Frame
@@ -69,7 +94,7 @@ postulate
 
 postulate
   frame : (H₀ H₁ : Symbolic)
-    → Maybe (Σ[ L ∈ Symbolic ] H₀ ⊢ H₁ ∧⋆ L)
+    → Maybe (Σ[ L ∈ Symbolic ] H₀ ⊢ H₁ ⋆ L)
   
 
 --
@@ -83,7 +108,7 @@ postulate
 
 postulate
   abduce : (Δ : Concrete) (H : Symbolic)
-    → Maybe (Σ[ M ∈ Symbolic ] ([] , Δ) ∧⋆ M ⊢ M)
+    → Maybe (Σ[ M ∈ Symbolic ] (∃ₗ[] Δ) ⋆ M ⊢ M)
 
 
 --
@@ -100,6 +125,6 @@ postulate
 
 biabduce : Concrete → Symbolic → Maybe (Symbolic × Symbolic)
 biabduce Δ H = do
-  M ← proj₁ <$> abduce Δ (H ∧⋆ ([] , true , true))
-  L ← proj₁ <$> frame (([] , Δ) ∧⋆ M) H
+  M ← proj₁ <$> abduce Δ (H ⋆ (∃ₗ[] true ₚ∧ₛ true))
+  L ← proj₁ <$> frame ((∃ₗ[] Δ) ⋆ M) H
   return (M , L)

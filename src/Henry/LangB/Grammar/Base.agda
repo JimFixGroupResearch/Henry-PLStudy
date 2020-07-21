@@ -6,6 +6,8 @@ module Henry.LangB.Grammar.Base where
 --
 
 
+open import Relation.Nullary
+
 open import Data.List as List hiding (and; or)
 open import Data.String hiding (_++_)
 open import Data.Product
@@ -69,23 +71,26 @@ data Pure : Set where
   equal : Term → Term → Pure
   unequal : Term → Term → Pure
   true : Pure
+  false : Pure
   and : Pure → Pure → Pure
 
-data Spacial-Predicate : Set where
-  points : Term → Term → Spacial-Predicate
-  list-segment : Term → Term → Spacial-Predicate
+data Spacial-Predicate-Binary : Set where
+  points : Spacial-Predicate-Binary
+  is-list-segment : Spacial-Predicate-Binary
 
 data Spacial : Set where
-  predicate : Spacial-Predicate → Spacial
+  pred₂ : Spacial-Predicate-Binary → Term → Term → Spacial
   true : Spacial
+  false : Spacial
   empty : Spacial
   seperately : Spacial → Spacial → Spacial
 
 Concrete : Set
 Concrete = Pure × Spacial
 
-Symbolic : Set
-Symbolic = List LVar × Concrete
+data Symbolic : Set where
+  consistent : List LVar → Concrete → Symbolic
+  contradiction : Symbolic
 
 data Judgement : Symbolic → Symbolic → Set where
 
@@ -94,40 +99,64 @@ data Judgement : Symbolic → Symbolic → Set where
   Conventions:
   - ∙ₚ and ₚ∙ indicates Pure parameters
   - ∙ₛ and ₛ∙ indicates Spacial parameters
-  - ∙         indicates Symbolic parameters
+  - ∙         indicates Concrete parameters
+
+  Binding levels: (decreasing tighness)
+  - Pure
+  - Spacial
+  - Concrete
+  - Symbolic
 -}
 
-infixr 6 and _ₚ∧_ _∧ₚ_ _∧_ _ₚ∧ₛ_ _ₛ∧ₚ_
-infixr 5 seperately _ₛ⋆_ _⋆ₛ_ _⋆_ _ₚ⋆ₛ_ _ₛ⋆ₚ_
-infix 4 Judgement
-infix 7 equal unequal points predicate
+infix 10 equal unequal _↦ₛ_ -- pure / spacial predicate
+infixl 9 and _ₚ∧_ _∧ₚ_ _ₚ∧ₛ_ _ₛ∧ₚ_ -- pure conjunctions
+infixl 8 seperately _ₛ⋆_ _⋆ₛ_ _ₚ⋆ₛ_ _ₛ⋆ₚ_ -- spacial conjunctions
+infixl 7 _∧_ -- concrete conjunctions
+infixl 6 _⋆_ -- symbolic conjunctions
+infix  5 ∃ₗ[_]_ ∃ₗ[]_ -- symbolic constructors
+infix  4 Judgement -- judgement constructors
 
 syntax equal t₁ t₂ = t₁ =ₜ t₂
 syntax unequal t₁ t₂ = t₁ ≠ₜ t₂
 syntax and p₁ p₂ = p₁ ₚ∧ₚ p₂
-
-syntax points t₁ t₂ = t₁ ↦ₛ t₂
--- syntax list-segment t₁ t₂ = lseg s to t
-
-syntax predicate p = predₛ[ p ]
 syntax seperately s₁ s₂ = s₁ ₛ⋆ₛ s₂
+
+_↦ₛ_ : Term → Term → Spacial
+_↦ₛ_ = pred₂ points
+
+lseg : Term → Term → Spacial
+lseg = pred₂ is-list-segment
+
+_∧ₚ_  : Concrete → Pure     → Concrete ; (p₁ , s)   ∧ₚ  p₂       = (p₁ ₚ∧ₚ p₂ , s)
+_ₚ∧_  : Pure     → Concrete → Concrete ; p₁        ₚ∧  (p₂ , s)  = (p₁ ₚ∧ₚ p₂ , s)
+_∧ₛ_  : Concrete → Spacial  → Concrete ; (p , s₁)   ∧ₛ  s₂       = (p , s₁ ₛ⋆ₛ s₂)
+_ₛ∧_  : Spacial  → Concrete → Concrete ; s₁        ₛ∧  (p , s₂)  = (p , s₁ ₛ⋆ₛ s₂)
+_ₚ∧ₛ_ : Pure     → Spacial  → Concrete ; p         ₚ∧ₛ  s        = (p , s)
+_ₛ∧ₚ_ : Spacial  → Pure     → Concrete ; s         ₛ∧ₚ  p        = (p , s)
+
+_⋆ₛ_  : Concrete → Spacial  → Concrete ; (p , s₁)   ⋆ₛ  s₂       = (p , s₁ ₛ⋆ₛ s₂)
+_ₛ⋆_  : Spacial  → Concrete → Concrete ; s₁        ₛ⋆  (p , s₂)  = (p , s₁ ₛ⋆ₛ s₂)
+_ₚ⋆ₛ_ : Pure     → Spacial  → Concrete ; p         ₚ⋆ₛ  s        = (p , s)
+_ₛ⋆ₚ_ : Spacial  → Pure     → Concrete ; s         ₛ⋆ₚ  p        = (p , s)
+
+∃ₗ[_]_ : List LVar → Concrete → Symbolic
+∃ₗ[ â ] Δ = consistent â Δ
+
+∃ₗ[]_ : Concrete → Symbolic
+∃ₗ[] Δ = consistent [] Δ
+
+_∧_ : Concrete → Concrete → Concrete
+(p₁ , s₁) ∧ (p₂ , s₂) = (p₁ ₚ∧ₚ p₂ , s₁ ₛ⋆ₛ s₂)
+
+_⋆_ : Symbolic → Symbolic → Symbolic
+consistent â₁ Δ₁ ⋆ consistent â₂ Δ₂ = consistent (â₁ ++ â₂) (Δ₁ ∧ Δ₂)
+contradiction ⋆ _ = contradiction
+_ ⋆ contradiction = contradiction
   
 syntax Judgement H₀ H₁ = H₀ ⊢ H₁
 
-_∧ₚ_  : Concrete → Pure     → Concrete ; (p₁ , s)   ∧ₚ p₂       = (p₁ ₚ∧ₚ p₂ , s)
-_ₚ∧_  : Pure     → Concrete → Concrete ; p₁        ₚ∧ (p₂ , s)  = (p₁ ₚ∧ₚ p₂ , s)
-_∧ₛ_  : Concrete → Spacial  → Concrete ; (p , s₁)   ∧ₛ s₂       = (p , s₁ ₛ⋆ₛ s₂)
-_ₛ∧_  : Spacial  → Concrete → Concrete ; s₁        ₛ∧ (p , s₂)  = (p , s₁ ₛ⋆ₛ s₂)
-_ₚ∧ₛ_ : Pure     → Spacial  → Concrete ; p         ₚ∧ₛ s        = (p , s)
-_ₛ∧ₚ_ : Spacial  → Pure     → Concrete ; s         ₛ∧ₚ p        = (p , s)
-_∧_   : Concrete → Concrete → Concrete ; (p₁ , s₁)  ∧ (p₂ , s₂) = (p₁ ₚ∧ₚ p₂ , s₁ ₛ⋆ₛ s₂)
-
-_⋆ₛ_  : Concrete → Spacial  → Concrete ; (p , s₁) ⋆ₛ s₂             = (p , s₁ ₛ⋆ₛ s₂)
-_ₛ⋆_  : Spacial  → Concrete → Concrete ; s₁             ₛ⋆ (p , s₂)   = (p , s₁ ₛ⋆ₛ s₂)
-_ₚ⋆ₛ_ : Pure → Spacial → Concrete ; p ₚ⋆ₛ s = (p , s)
-_ₛ⋆ₚ_ : Spacial → Pure → Concrete ; s ₛ⋆ₚ p = (p , s)
-_⋆_   : Concrete → Concrete → Concrete ; (p₁ , s₁) ⋆  (p₂ , s₂) = (p₁ ₚ∧ₚ p₂ , s₁ ₛ⋆ₛ s₂)
-_∧⋆_ : Symbolic → Symbolic → Symbolic ; (l₁ , p₁ , s₁) ∧⋆ (l₂ , p₂ , s₂) = (l₁ ++ l₂ , p₁ ₚ∧ₚ p₂ , s₁ ₛ⋆ₛ s₂)
+_⊬_ : Symbolic → Symbolic → Set
+H₀ ⊬ H₁ = ¬ (H₀ ⊢ H₁)
 
 
 --

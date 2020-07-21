@@ -1,4 +1,4 @@
-module Henry.LangB.Verifying where
+module Henry.LangB.Verification where
 
 
 --
@@ -37,7 +37,7 @@ module Verification-Context where
   open Monad
   open State
 
-  Function-Interface = List (Var × Type) × Formula × Formula
+  Function-Interface = List (Var × Type) × Symbolic × Symbolic
 
   record Verification-Context : Set where
     constructor verification-context
@@ -77,13 +77,13 @@ open Verification-Context
 
 
 postulate
-  _implies_ : Formula → Formula → Verification-Context.M Bool
+  _implies_ : Symbolic → Symbolic → Verification-Context.M Bool
 
 
-weakest-precondition : Statement → Verification-Context.M Formula
+weakest-precondition : Statement → Verification-Context.M Symbolic
 -- account for mutation of stack
 weakest-precondition (sequence (s ∷ ss)) =
-  TODO where postulate TODO : Verification-Context.M Formula
+  TODO where postulate TODO : Verification-Context.M Symbolic
 weakest-precondition (assert φ) = return φ
 weakest-precondition (`if a `then s₁ `else s₂) = do
   φ₁ ← weakest-precondition s₁
@@ -102,10 +102,10 @@ weakest-precondition (apply x f as) = do
 weakest-precondition _ = return true
 
 
-strongest-postcondition : Statement → Verification-Context.M Formula
+strongest-postcondition : Statement → Verification-Context.M Symbolic
 -- account for mutation of stack
 strongest-postcondition (sequence ss) =
-  TODO where postulate TODO : Verification-Context.M Formula
+  TODO where postulate TODO : Verification-Context.M Symbolic
 strongest-postcondition (assert φ) = return φ
 strongest-postcondition (`if a `then s₁ `else s₂) = do
   ψ₁ ← strongest-postcondition s₁

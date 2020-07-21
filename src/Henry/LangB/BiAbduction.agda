@@ -83,13 +83,14 @@ postulate
     --------------------
     → (∃ₗ[] Δ) ⋆ M ⊢ H
 
+
 --
 -- Frame
 --
 
 
 {-
-  frame(H₀, H₁) = L such that H₀ ⊢ H₁ ⋆ L
+  frame(H₀, H₁) = L such that H₀ ⊢ H₁ ⋆ L, or fails
 -}
 
 postulate
@@ -103,7 +104,7 @@ postulate
 
 
 {-
-  abduce(Δ, H) = M such that Δ ⋆ M ⊢ H
+  abduce(Δ, H) = M such that Δ ⋆ M ⊢ H, or fails
 -}
 
 postulate
@@ -120,11 +121,13 @@ postulate
   biabduce(Δ, H) = M , L
     where
       M = Abduce(Δ, H ⋆ true)
-      L = Frame(Δ ⋆ M, H)
+      L = Frame(Δ ⋆ M, H),
+    or fails
 -}
 
-biabduce : Concrete → Symbolic → Maybe (Symbolic × Symbolic)
+biabduce : (Δ : Concrete) (H : Symbolic)
+  → Maybe (Σ[ (M , L) ∈ Symbolic × Symbolic ] (∃ₗ[] Δ) ⋆ M ⊢ H ⋆ L)
 biabduce Δ H = do
-  M ← proj₁ <$> abduce Δ (H ⋆ (∃ₗ[] true ₚ∧ₛ true))
-  L ← proj₁ <$> frame ((∃ₗ[] Δ) ⋆ M) H
-  return (M , L)
+  M , pM ← abduce Δ (H ⋆ (∃ₗ[] true ₚ∧ₛ true))
+  L , pL ← frame ((∃ₗ[] Δ) ⋆ M) H
+  return ((M , L) , pL)

@@ -6,8 +6,6 @@ module Henry.LangB.Grammar.Base where
 --
 
 
-open import Relation.Nullary
-
 open import Data.List as List hiding (and; or)
 open import Data.String hiding (_++_)
 open import Data.Product
@@ -23,6 +21,8 @@ data Type : Set where
   natural  : Type
   list     : Type
   function : List Type → Type → Type
+
+syntax function ps t = ps `→ t
   
 
 --
@@ -39,10 +39,7 @@ data Term : Set where
   nil : Term
   app : Term → Term → Term
 
-infixr 5 app
-
 syntax var x = ` x
--- syntax nat n = ...
 pattern `[] = nil
 syntax app h t = h `∷ t
 
@@ -68,31 +65,29 @@ LVar : Set
 LVar = String
 
 data Pure : Set where
-  equal : Term → Term → Pure
+  equal   : Term → Term → Pure
   unequal : Term → Term → Pure
-  true : Pure
-  false : Pure
-  and : Pure → Pure → Pure
+  true    : Pure
+  false   : Pure
+  and     : Pure → Pure → Pure
 
 data Spacial-Predicate-Binary : Set where
-  points : Spacial-Predicate-Binary
+  points          : Spacial-Predicate-Binary
   is-list-segment : Spacial-Predicate-Binary
 
 data Spacial : Set where
-  pred₂ : Spacial-Predicate-Binary → Term → Term → Spacial
-  true : Spacial
-  false : Spacial
-  empty : Spacial
+  pred₂      : Spacial-Predicate-Binary → Term → Term → Spacial
+  true       : Spacial
+  false      : Spacial
+  empty      : Spacial
   seperately : Spacial → Spacial → Spacial
 
 Concrete : Set
 Concrete = Pure × Spacial
 
 data Symbolic : Set where
-  consistent : List LVar → Concrete → Symbolic
+  consistent    : List LVar → Concrete → Symbolic
   contradiction : Symbolic
-
-data Judgement : Symbolic → Symbolic → Set where
 
 -- syntax
 {-
@@ -108,17 +103,9 @@ data Judgement : Symbolic → Symbolic → Set where
   - Symbolic
 -}
 
-infix 10 equal unequal _↦ₛ_ -- pure / spacial predicate
-infixl 9 and _ₚ∧_ _∧ₚ_ _ₚ∧ₛ_ _ₛ∧ₚ_ -- pure conjunctions
-infixl 8 seperately _ₛ⋆_ _⋆ₛ_ _ₚ⋆ₛ_ _ₛ⋆ₚ_ -- spacial conjunctions
-infixl 7 _∧_ -- concrete conjunctions
-infixl 6 _⋆_ -- symbolic conjunctions
-infix  5 ∃ₗ[_]_ ∃ₗ[]_ -- symbolic constructors
-infix  4 Judgement -- judgement constructors
-
-syntax equal t₁ t₂ = t₁ =ₜ t₂
-syntax unequal t₁ t₂ = t₁ ≠ₜ t₂
-syntax and p₁ p₂ = p₁ ₚ∧ₚ p₂
+syntax equal t₁ t₂      = t₁ =ₜ t₂
+syntax unequal t₁ t₂    = t₁ ≠ₜ t₂
+syntax and p₁ p₂        = p₁ ₚ∧ₚ p₂
 syntax seperately s₁ s₂ = s₁ ₛ⋆ₛ s₂
 
 _↦ₛ_ : Term → Term → Spacial
@@ -151,12 +138,8 @@ _∧_ : Concrete → Concrete → Concrete
 _⋆_ : Symbolic → Symbolic → Symbolic
 consistent â₁ Δ₁ ⋆ consistent â₂ Δ₂ = consistent (â₁ ++ â₂) (Δ₁ ∧ Δ₂)
 contradiction ⋆ _ = contradiction
+{-# CATCHALL #-}
 _ ⋆ contradiction = contradiction
-  
-syntax Judgement H₀ H₁ = H₀ ⊢ H₁
-
-_⊬_ : Symbolic → Symbolic → Set
-H₀ ⊬ H₁ = ¬ (H₀ ⊢ H₁)
 
 
 --
@@ -183,12 +166,12 @@ data Statement : Set where
   apply    : Var → Var → List Term → Statement
 
 syntax branch a s₁ s₂ = `if a `then s₁ `else s₂
-syntax loop a φᵢ s = `while a `invariant φᵢ `do s
-syntax declare x α a = `declare x `: α `≔ a
-syntax assign x a = x `≔ a
+syntax loop a φᵢ s    = `while a `invariant φᵢ `do s
+syntax declare x α a  = `declare x `: α `≔ a
+syntax assign x a     = x `≔ a
 syntax allocate p α a = `allocate p `: α `↦ a
-syntax write p a = p `↦ a
-syntax read x p = x `← p
+syntax write p a      = p `↦ a
+syntax read x p       = x `← p
 
 --
 -- Program
@@ -198,3 +181,25 @@ syntax read x p = x `← p
 data Program : Set where
   program : Statement → Program
 
+
+--
+-- Infix
+--
+
+
+-- term/type/pointer constructor
+infix  13 var function pointer 
+-- term conjunction
+infixr 12 app
+-- pure/spacial predicate
+infix  11 equal unequal _↦ₛ_
+-- pure conjunction
+infixl 10 and _ₚ∧_ _∧ₚ_ _ₚ∧ₛ_ _ₛ∧ₚ_
+-- spacial conjunction
+infixl 9  seperately _ₛ⋆_ _⋆ₛ_ _ₚ⋆ₛ_ _ₛ⋆ₚ_
+-- concrete conjunction
+infixl 8  _∧_
+-- symbolic conjunction
+infixl 7  _⋆_
+-- symbolic constructors
+infix  6  ∃ₗ[_]_ ∃ₗ[]_ 

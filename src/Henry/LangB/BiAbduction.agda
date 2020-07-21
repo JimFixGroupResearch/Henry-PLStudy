@@ -44,22 +44,22 @@ data Abductive-Judgement : Concrete → Symbolic → Symbolic → Set where
 
   remove : ∀ (Π Π′ : Pure) (Σ Σ′ : Spacial) (â : List LVar) (M H : Symbolic)
     → (Π ₚ∧ₛ Σ) ⋆⟦ M ⟧▹ H
-    → ∃ₗ[] Π ₚ∧ₛ Σ ⊢ ∃ₗ[ â ] Π′ ₚ∧ₛ true
-    → ∃ₗ[] Π ₚ∧ₚ Π′ ₚ∧ₛ empty ⊢ ∃ₗ[] true ₚ∧ₛ Σ′
+    → ∃ₗ[] Π ₚ∧ₛ Σ ⊢ ∃ₗ[ â ] Π′ ₚ∧ₛ trueₛ
+    → ∃ₗ[] Π ₚ∧ₚ Π′ ₚ∧ₛ empty ⊢ ∃ₗ[] trueₚ ₚ∧ₛ Σ′
     ----------------------------------------------
     → Π ₚ∧ₛ Σ ⋆⟦ M ⟧▹ H ⋆ (∃ₗ[ â ] (Π′ ₚ∧ₛ Σ′))
 
-  match : ∀ (E E₀ E₁ : Term) (Δ Δ′ : Concrete) (â b̂ : List LVar) (M : Symbolic)
-    → (E₀ =ₜ E₁ ₚ∧ₛ true) ∧ Δ ⋆⟦ M ⟧▹ ∃ₗ[ b̂ ] Δ′
+  match : ∀ (T T₀ T₁ : Term) (Δ Δ′ : Concrete) (â b̂ : List LVar) (M : Symbolic)
+    → (T₀ =ₜ T₁ ₚ∧ₛ trueₛ) ∧ Δ ⋆⟦ M ⟧▹ ∃ₗ[ b̂ ] Δ′
     -------------------------------------------------------------------------------------------
-    → (Δ ⋆ₛ E ↦ₛ E₀) ⋆⟦ (∃ₗ[ â ] E₀ =ₜ E₁ ₚ∧ₛ true) ⋆ M ⟧▹ ∃ₗ[ â ++ b̂ ] Δ′ ∧ true ₚ∧ₛ E ↦ₛ E₁
-    -- additionally: where b̂ ∩ FreeLVar(E₁) = ∅
+    → (Δ ⋆ₛ T ↦ₛ T₀) ⋆⟦ (∃ₗ[ â ] T₀ =ₜ T₁ ₚ∧ₛ trueₛ) ⋆ M ⟧▹ ∃ₗ[ â ++ b̂ ] Δ′ ∧ trueₚ ₚ∧ₛ T ↦ₛ T₁
+    -- additionally: where b̂ ∩ FreeLVar(T₁) = ∅
 
-  lseg-right : ∀ (E₀ E₁ E : Term) (B : Spacial-Predicate-Binary)
+  lseg-right : ∀ (T₀ T₁ T : Term) (B : Spacial-Predicate-Binary)
                  (Δ Δ′ : Concrete) (â b̂ : List LVar) (M : Symbolic)
-    → Δ ⋆⟦ M ⟧▹ ∃ₗ[ â ] Δ′ ∧ true ₚ∧ₛ lseg E₀ E₁
+    → Δ ⋆⟦ M ⟧▹ ∃ₗ[ â ] Δ′ ∧ trueₚ ₚ∧ₛ lseg T₀ T₁
     ------------------------------------------------------------------------
-    → Δ ∧ true ₚ∧ₛ pred₂ B E E₀ ⋆⟦ M ⟧▹ ∃ₗ[ â ++ b̂ ] Δ′ ∧ true ₚ∧ₛ E ↦ₛ E₁
+    → Δ ∧ trueₚ ₚ∧ₛ pred₂ B T T₀ ⋆⟦ M ⟧▹ ∃ₗ[ â ++ b̂ ] Δ′ ∧ trueₚ ₚ∧ₛ T ↦ₛ T₁
 
   base-empty : ∀ (Π Π′ : Pure) (â : List LVar) →
     -------------------------------------------------------------
@@ -69,12 +69,12 @@ data Abductive-Judgement : Concrete → Symbolic → Symbolic → Set where
     ------------------------------------------------
     → Δ ⋆⟦ ∃ₗ[ â ] Π ₚ∧ₛ empty ⟧▹ ∃ₗ[] Π ₚ∧ₛ empty
 
-  missing : ∀ (B : Spacial-Predicate-Binary) (E E′ : Term)
+  missing : ∀ (B : Spacial-Predicate-Binary) (T E′ : Term)
               (Δ Δ′ : Concrete) (â : List LVar) (M : Symbolic)
     → Δ ⋆⟦ M ⟧▹ ∃ₗ[] Δ′
-    → ((∃ₗ[] Δ) ⋆ (∃ₗ[ â ] true ₚ∧ₛ pred₂ B E E′)) ⊬ contradiction
+    → ((∃ₗ[] Δ) ⋆ (∃ₗ[ â ] trueₚ ₚ∧ₛ pred₂ B T E′)) ⊬ contradiction
     -------------------------------------------------------------------------------------------
-    → Δ ⋆⟦ M ⋆ (∃ₗ[ â ] true ₚ∧ₛ pred₂ B E E′) ⟧▹ (∃ₗ[] Δ′) ⋆ (∃ₗ[ â ] true ₚ∧ₛ pred₂ B E E′)
+    → Δ ⋆⟦ M ⋆ (∃ₗ[ â ] trueₚ ₚ∧ₛ pred₂ B T E′) ⟧▹ (∃ₗ[] Δ′) ⋆ (∃ₗ[ â ] trueₚ ₚ∧ₛ pred₂ B T E′)
 
 
 postulate
@@ -128,6 +128,6 @@ postulate
 biabduce : (Δ : Concrete) (H : Symbolic)
   → Maybe (Σ[ (M , L) ∈ Symbolic × Symbolic ] (∃ₗ[] Δ) ⋆ M ⊢ H ⋆ L)
 biabduce Δ H = do
-  M , pM ← abduce Δ (H ⋆ (∃ₗ[] true ₚ∧ₛ true))
+  M , pM ← abduce Δ (H ⋆ (∃ₗ[] true))
   L , pL ← frame ((∃ₗ[] Δ) ⋆ M) H
   return ((M , L) , pL)

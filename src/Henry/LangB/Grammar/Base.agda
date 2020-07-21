@@ -67,8 +67,8 @@ LVar = String
 data Pure : Set where
   equal   : Term → Term → Pure
   unequal : Term → Term → Pure
-  true    : Pure
-  false   : Pure
+  trueₚ   : Pure
+  falseₚ  : Pure
   and     : Pure → Pure → Pure
 
 data Spacial-Predicate-Binary : Set where
@@ -76,11 +76,11 @@ data Spacial-Predicate-Binary : Set where
   is-list-segment : Spacial-Predicate-Binary
 
 data Spacial : Set where
-  pred₂      : Spacial-Predicate-Binary → Term → Term → Spacial
-  true       : Spacial
-  false      : Spacial
-  empty      : Spacial
-  seperately : Spacial → Spacial → Spacial
+  pred₂  : Spacial-Predicate-Binary → Term → Term → Spacial
+  trueₛ  : Spacial
+  falseₛ : Spacial
+  empty  : Spacial
+  sep    : Spacial → Spacial → Spacial
 
 Concrete : Set
 Concrete = Pure × Spacial
@@ -103,10 +103,10 @@ data Symbolic : Set where
   - Symbolic
 -}
 
-syntax equal t₁ t₂      = t₁ =ₜ t₂
-syntax unequal t₁ t₂    = t₁ ≠ₜ t₂
-syntax and p₁ p₂        = p₁ ₚ∧ₚ p₂
-syntax seperately s₁ s₂ = s₁ ₛ⋆ₛ s₂
+syntax equal t₁ t₂   = t₁ =ₜ t₂
+syntax unequal t₁ t₂ = t₁ ≠ₜ t₂
+syntax and p₁ p₂     = p₁ ₚ∧ₚ p₂
+syntax sep s₁ s₂     = s₁ ₛ⋆ₛ s₂
 
 _↦ₛ_ : Term → Term → Spacial
 _↦ₛ_ = pred₂ points
@@ -125,6 +125,9 @@ _⋆ₛ_  : Concrete → Spacial  → Concrete ; (p , s₁)   ⋆ₛ  s₂      
 _ₛ⋆_  : Spacial  → Concrete → Concrete ; s₁        ₛ⋆  (p , s₂)  = (p , s₁ ₛ⋆ₛ s₂)
 _ₚ⋆ₛ_ : Pure     → Spacial  → Concrete ; p         ₚ⋆ₛ  s        = (p , s)
 _ₛ⋆ₚ_ : Spacial  → Pure     → Concrete ; s         ₛ⋆ₚ  p        = (p , s)
+
+true : Concrete
+true = trueₚ ₚ∧ₛ trueₛ
 
 ∃ₗ[_]_ : List LVar → Concrete → Symbolic
 ∃ₗ[ â ] Δ = consistent â Δ
@@ -196,7 +199,7 @@ infix  11 equal unequal _↦ₛ_
 -- pure conjunction
 infixl 10 and _ₚ∧_ _∧ₚ_ _ₚ∧ₛ_ _ₛ∧ₚ_
 -- spacial conjunction
-infixl 9  seperately _ₛ⋆_ _⋆ₛ_ _ₚ⋆ₛ_ _ₛ⋆ₚ_
+infixl 9  sep _ₛ⋆_ _⋆ₛ_ _ₚ⋆ₛ_ _ₛ⋆ₚ_
 -- concrete conjunction
 infixl 8  _∧_
 -- symbolic conjunction

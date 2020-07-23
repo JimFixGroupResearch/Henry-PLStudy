@@ -6,10 +6,16 @@ module Henry.LangB.Grammar.Base where
 --
 
 
+import Level
+
+open import Relation.Binary
+open import Relation.Binary.PropositionalEquality using (_≡_)
+open import Relation.Nullary
 open import Data.List as List hiding (and; or)
-open import Data.String hiding (_++_)
+open import Data.String as String hiding (_++_)
 open import Data.Product
 open import Data.Nat
+open import Data.Bool using (Bool)
 
 
 --
@@ -33,8 +39,16 @@ syntax function ps t = ps `→ t
 Var : Set
 Var = String
 
+LVar : Set
+LVar = String
+
+LVars : Set
+LVars = List LVar
+
+
 data Term : Set where
   var : Var → Term
+  lvar : LVar → Term
   nat : ℕ → Term
   nil : Term
   app : Term → Term → Term
@@ -42,6 +56,14 @@ data Term : Set where
 syntax var x = ` x
 pattern `[] = nil
 syntax app h t = h `∷ t
+
+
+free-lvars-term : Term → LVars
+free-lvars-term (var x) = []
+free-lvars-term (lvar x) = [ x ]
+free-lvars-term (nat x) = []
+free-lvars-term `[] = []
+free-lvars-term (app h t) = free-lvars-term h ++ free-lvars-term t 
 
 
 --
@@ -59,10 +81,16 @@ syntax pointer p = `* p
 -- Formula
 --
 
+-- â is a subset of b̂
+-- postulate sub-lvars : Rel LVars Level.zero
 
--- logic variable
-LVar : Set
-LVar = String
+sub-lvars : Rel LVars Level.zero
+sub-lvars â b̂ = all (λ a → any (λ b → does (a String.≟ b)) b̂) â ≡ Bool.true
+
+-- sub-lvars : LVars → LVars → Bool
+-- sub-lvars â b̂ = all (λ a → any (λ b → does (a String.≟ b)) b̂) â
+
+syntax sub-lvars â b̂ = â ⊂ b̂
 
 data Pure : Set where
   equal   : Term → Term → Pure
@@ -82,11 +110,19 @@ data Spacial : Set where
   empty  : Spacial
   sep    : Spacial → Spacial → Spacial
 
+-- lvars that are free in Σ
+free-lvars : Spacial → LVars
+free-lvars (pred₂ B t₁ t₂) = free-lvars-term t₁ ++ free-lvars-term t₂
+free-lvars trueₛ = []
+free-lvars falseₛ = []
+free-lvars empty = []
+free-lvars (sep Σ₁ Σ₂) = free-lvars Σ₁ ++ free-lvars Σ₂
+
 Concrete : Set
 Concrete = Pure × Spacial
 
 data Symbolic : Set where
-  consistent    : List LVar → Concrete → Symbolic
+  consistent    : LVars → Concrete → Symbolic
   contradiction : Symbolic
 
 -- syntax
@@ -103,8 +139,8 @@ data Symbolic : Set where
   - Symbolic
 -}
 
-syntax equal t₁ t₂   = t₁ =ₜ t₂
-syntax unequal t₁ t₂ = t₁ ≠ₜ t₂
+syntax equal t₁ t₂   = t₁ =ₚ t₂
+syntax unequal t₁ t₂ = t₁ ≠ₚ t₂
 syntax and p₁ p₂     = p₁ ₚ∧ₚ p₂
 syntax sep s₁ s₂     = s₁ ₛ⋆ₛ s₂
 
@@ -129,11 +165,14 @@ _ₛ⋆ₚ_ : Spacial  → Pure     → Concrete ; s         ₛ⋆ₚ  p       
 true : Concrete
 true = trueₚ ₚ∧ₛ trueₛ
 
-∃ₗ[_]_ : List LVar → Concrete → Symbolic
-∃ₗ[ â ] Δ = consistent â Δ
+-- pattern ∃ₗ[_]_ = consistent
+-- pattern ∃ₗ[]_ = consistent []
+
+∃ₗ[_]_ : LVars → Concrete → Symbolic
+∃ₗ[_]_ = consistent
 
 ∃ₗ[]_ : Concrete → Symbolic
-∃ₗ[] Δ = consistent [] Δ
+∃ₗ[]_ = consistent []
 
 _∧_ : Concrete → Concrete → Concrete
 (p₁ , s₁) ∧ (p₂ , s₂) = (p₁ ₚ∧ₚ p₂ , s₁ ₛ⋆ₛ s₂)
@@ -148,6 +187,19 @@ _ ⋆ contradiction = contradiction
 --
 -- Statement
 --
+
+{- TODO:
+
+remove Sequence statement, for the sake of inferring Hoare triples?
+Then need to have explicit way, outside of individual Statements,
+to consider sequenced Statement for the sake of inferring what transfers
+between Hoare triples.
+
+e.g. the program "x ≔ 1 ; x ≔ 2"
+should ignore the inference in the postcondition of "x ≔ 1" when going on to "x ≔ 2"
+
+-}
+
 
 
 data Statement : Set where
